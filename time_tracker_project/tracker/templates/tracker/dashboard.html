@@ -1,0 +1,695 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}TimeTracker Pro - Registro de Horas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="sidebar">
+            <h5 class="mb-3"><i class="fas fa-tachometer-alt me-2"></i>Resumen Rápido</h5>
+            
+            <div class="quick-stats">
+                <i class="fas fa-clock text-primary"></i>
+                <div>
+                    <h6 class="mb-0">Horas Hoy</h6>
+                    <span class="text-muted">{{ stats.horas_hoy|floatformat:1 }}h</span>
+                </div>
+            </div>
+            
+            <div class="quick-stats">
+                <i class="fas fa-calendar-week text-success"></i>
+                <div>
+                    <h6 class="mb-0">Esta Semana</h6>
+                    <span class="text-muted">{{ stats.horas_semana|floatformat:1 }}h</span>
+                </div>
+            </div>
+            
+            <div class="quick-stats">
+                <i class="fas fa-calendar-alt text-warning"></i>
+                <div>
+                    <h6 class="mb-0">Este Mes</h6>
+                    <span class="text-muted">{{ stats.horas_mes|floatformat:1 }}h</span>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <h6><i class="fas fa-filter me-2"></i>Filtros Rápidos</h6>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="filterDesarrollo" checked>
+                <label class="form-check-label" for="filterDesarrollo">
+                    <span class="badge bg-primary tag-badge">Desarrollo</span>
+                </label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="filterDiseno" checked>
+                <label class="form-check-label" for="filterDiseno">
+                    <span class="badge bg-success tag-badge">Diseño</span>
+                </label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="filterReuniones" checked>
+                <label class="form-check-label" for="filterReuniones">
+                    <span class="badge bg-warning tag-badge">Reuniones</span>
+                </label>
+            </div>
+            
+            <hr class="my-4">
+            
+            <button class="btn btn-primary w-100 mb-2" onclick="abrirModalNuevaEntrada()">
+                <i class="fas fa-plus me-2"></i>Nueva Entrada
+            </button>
+            
+            <a href="{% url 'tracker:reportes' %}" class="btn btn-outline-primary w-100">
+                <i class="fas fa-download me-2"></i>Exportar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x text-primary mb-2"></i>
+                        <h4 class="card-title">{{ stats.horas_hoy|floatformat:1 }}h</h4>
+                        <p class="card-text text-muted">Hoy</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-week fa-2x text-success mb-2"></i>
+                        <h4 class="card-title">{{ stats.horas_semana|floatformat:1 }}h</h4>
+                        <p class="card-text text-muted">Esta Semana</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-project-diagram fa-2x text-warning mb-2"></i>
+                        <h4 class="card-title">{{ stats.proyectos_activos }}</h4>
+                        <p class="card-text text-muted">Proyectos Activos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-2x text-info mb-2"></i>
+                        <h4 class="card-title">5</h4>
+                        <p class="card-text text-muted">Clientes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendar -->
+        <div class="calendar-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-calendar me-2"></i>Calendario de Horas</h3>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="changeView('dayGridMonth')">
+                        <i class="fas fa-calendar-alt me-1"></i>Mes
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="changeView('timeGridWeek')">
+                        <i class="fas fa-calendar-week me-1"></i>Semana
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="changeView('timeGridDay')">
+                        <i class="fas fa-calendar-day me-1"></i>Día
+                    </button>
+                </div>
+            </div>
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Time Entry -->
+<div class="modal fade" id="timeEntryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-clock me-2"></i><span id="modalTitle">Registrar Horas de Trabajo</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="timeEntryForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" id="entrada_id" name="entrada_id" value="">
+                    <input type="hidden" id="form_mode" name="form_mode" value="create">
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="proyecto" class="form-label">
+                                    <i class="fas fa-project-diagram me-1"></i>Proyecto *
+                                </label>
+                                <div class="input-group">
+                                    <select class="form-select" id="proyecto" name="proyecto" required>
+                                        <option value="">Seleccionar proyecto...</option>
+                                        {% for proyecto in proyectos %}
+                                            <option value="{{ proyecto.id }}">{{ proyecto.nombre }} - {{ proyecto.cliente.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-primary" id="btnNuevoProyecto" data-bs-toggle="collapse" data-bs-target="#collapseNuevoProyecto">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Panel para nuevo proyecto -->
+                    <div class="collapse" id="collapseNuevoProyecto">
+                        <div class="card card-body mb-3" style="background-color: #f8f9fa;">
+                            <h6 class="mb-3">
+                                <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Proyecto
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="nuevo_cliente" class="form-label">Cliente</label>
+                                        <select class="form-select" id="nuevo_cliente" name="nuevo_cliente">
+                                            <option value="">Seleccionar cliente...</option>
+                                            {% for cliente in clientes %}
+                                                <option value="{{ cliente.id }}">{{ cliente.nombre }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="nuevo_proyecto_nombre" class="form-label">Nombre del Proyecto</label>
+                                        <input type="text" class="form-control" id="nuevo_proyecto_nombre" name="nuevo_proyecto_nombre" placeholder="Ej: Desarrollo Web">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="cancelarNuevoProyecto()">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm" onclick="crearProyecto()">
+                                    <i class="fas fa-save me-1"></i>Crear Proyecto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="fecha" class="form-label">
+                                    <i class="fas fa-calendar me-1"></i>Fecha *
+                                </label>
+                                <input type="date" class="form-control" id="fecha" name="fecha" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="hora_inicio" class="form-label">
+                                    <i class="fas fa-play me-1"></i>Hora Inicio *
+                                </label>
+                                <input type="time" class="form-control" id="hora_inicio" name="hora_inicio" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="hora_fin" class="form-label">
+                                    <i class="fas fa-stop me-1"></i>Hora Fin *
+                                </label>
+                                <input type="time" class="form-control" id="hora_fin" name="hora_fin" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="horas" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>Horas Totales
+                                </label>
+                                <input type="number" class="form-control" id="horas" name="horas" step="0.25" min="0.25" readonly>
+                                <small class="text-muted">Se calcula automáticamente</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">
+                            <i class="fas fa-file-alt me-1"></i>Descripción de la Tarea *
+                        </label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="3" placeholder="Describe las actividades realizadas..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="btnGuardar" onclick="submitTimeEntry()">
+                    <i class="fas fa-save me-1"></i>Guardar Entrada
+                </button>
+                <button type="button" class="btn btn-danger d-none" id="btnEliminarEntrada" onclick="eliminarEntrada()">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="d-none position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let calendar;
+let currentModal;
+let isEditMode = false;
+
+// Variables globales para URLs (definir según tu configuración de URLs)
+const URLS = {
+    entradas_api: '{% url "tracker:api_entradas" %}',
+    nueva_entrada: '{% url "tracker:nueva_entrada" %}',
+    crear_proyecto: '{% url "tracker:crear_proyecto" %}',
+    eliminar_entrada: function(id) { return `/tracker/entradas/eliminar/${id}/`; },
+    editar_entrada: function(id) { return `/tracker/entradas/editar/${id}/`; }
+};
+
+// Funciones de utilidad
+function showToast(message, type = 'info') {
+    const toastId = 'toast_' + Date.now();
+    const typeClass = type === 'error' ? 'bg-danger' : type === 'success' ? 'bg-success' : 'bg-info';
+    
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white ${typeClass} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', toastHtml);
+    const toast = new bootstrap.Toast(document.getElementById(toastId));
+    toast.show();
+    
+    // Limpiar después de que se oculte
+    setTimeout(() => {
+        const toastEl = document.getElementById(toastId);
+        if (toastEl) toastEl.remove();
+    }, 5000);
+}
+
+function showLoading(show = true) {
+    const spinner = document.getElementById('loadingSpinner');
+    if (show) {
+        spinner.classList.remove('d-none');
+    } else {
+        spinner.classList.add('d-none');
+    }
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Funciones del modal
+function limpiarModal() {
+    document.getElementById('timeEntryForm').reset();
+    document.getElementById('entrada_id').value = '';
+    document.getElementById('form_mode').value = 'create';
+    document.getElementById('modalTitle').textContent = 'Registrar Horas de Trabajo';
+    document.getElementById('btnGuardar').innerHTML = '<i class="fas fa-save me-1"></i>Guardar Entrada';
+    document.getElementById('btnEliminarEntrada').classList.add('d-none');
+    
+    // Cerrar collapse si está abierto
+    const collapse = bootstrap.Collapse.getInstance(document.getElementById('collapseNuevoProyecto'));
+    if (collapse) collapse.hide();
+    
+    // Fecha actual por defecto
+    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+    
+    isEditMode = false;
+}
+
+function abrirModalNuevaEntrada() {
+    limpiarModal();
+    currentModal = new bootstrap.Modal(document.getElementById('timeEntryModal'));
+    currentModal.show();
+}
+
+function abrirModalEditarEntrada(entradaData) {
+    limpiarModal();
+    
+    // Llenar campos con datos existentes
+    document.getElementById('entrada_id').value = entradaData.id;
+    document.getElementById('form_mode').value = 'edit';
+    document.getElementById('modalTitle').textContent = 'Editar Registro de Horas';
+    document.getElementById('btnGuardar').innerHTML = '<i class="fas fa-save me-1"></i>Actualizar Entrada';
+    document.getElementById('btnEliminarEntrada').classList.remove('d-none');
+    
+    // Llenar campos
+    document.getElementById('proyecto').value = entradaData.proyecto_id || '';
+    document.getElementById('fecha').value = entradaData.fecha || '';
+    document.getElementById('hora_inicio').value = entradaData.hora_inicio || '';
+    document.getElementById('hora_fin').value = entradaData.hora_fin || '';
+    document.getElementById('descripcion').value = entradaData.descripcion || '';
+    document.getElementById('horas').value = entradaData.horas || '';
+    
+    isEditMode = true;
+    
+    currentModal = new bootstrap.Modal(document.getElementById('timeEntryModal'));
+    currentModal.show();
+}
+
+// Funciones de gestión de proyectos
+window.cancelarNuevoProyecto = function() {
+    document.getElementById('nuevo_cliente').value = '';
+    document.getElementById('nuevo_proyecto_nombre').value = '';
+    const collapse = bootstrap.Collapse.getInstance(document.getElementById('collapseNuevoProyecto'));
+    if (collapse) collapse.hide();
+};
+
+window.crearProyecto = function() {
+    const cliente = document.getElementById('nuevo_cliente').value;
+    const nombre = document.getElementById('nuevo_proyecto_nombre').value;
+    
+    if (!cliente || !nombre.trim()) {
+        showToast('Por favor completa todos los campos del proyecto', 'error');
+        return;
+    }
+    
+    showLoading(true);
+    
+    const data = {
+        cliente: cliente,
+        nombre: nombre.trim(),
+        fecha_inicio: new Date().toISOString().split('T')[0]
+    };
+    
+    fetch(URLS.crear_proyecto, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        showLoading(false);
+        if (result.success) {
+            const select = document.getElementById('proyecto');
+            const option = document.createElement('option');
+            option.value = result.proyecto.id;
+            option.textContent = `${result.proyecto.nombre} - ${result.proyecto.cliente_nombre}`;
+            option.selected = true;
+            select.appendChild(option);
+            cancelarNuevoProyecto();
+            showToast('Proyecto creado exitosamente', 'success');
+        } else {
+            showToast(result.error || 'Error al crear proyecto', 'error');
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        console.error('Error:', error);
+        showToast('Error al conectar con el servidor', 'error');
+    });
+};
+
+// Funciones del calendario
+window.changeView = function(viewName) {
+    if (calendar) calendar.changeView(viewName);
+};
+
+function initCalendar() {
+    const calendarEl = document.getElementById('calendar');
+    
+    if (!calendarEl) {
+        console.error('Elemento calendario no encontrado');
+        return;
+    }
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'es',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            day: 'Día'
+        },
+        slotMinTime: '08:00:00',
+        slotMaxTime: '20:00:00',
+        selectable: true,
+        selectMirror: true,
+        
+        events: function(fetchInfo, successCallback, failureCallback) {
+            fetch(URLS.entradas_api)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al cargar eventos');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Eventos cargados:', data);
+                    successCallback(data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar eventos:', error);
+                    showToast('Error al cargar los eventos del calendario', 'error');
+                    failureCallback(error);
+                });
+        },
+        
+        select: function(info) {
+            limpiarModal();
+            
+            // Establecer fecha y horas basadas en la selección
+            const fechaSeleccionada = info.start.toISOString().split('T')[0];
+            const horaInicio = info.start.toTimeString().slice(0, 5);
+            const horaFin = info.end ? info.end.toTimeString().slice(0, 5) : '';
+            
+            document.getElementById('fecha').value = fechaSeleccionada;
+            document.getElementById('hora_inicio').value = horaInicio;
+            document.getElementById('hora_fin').value = horaFin;
+            
+            // Calcular horas automáticamente
+            setTimeout(calcularHoras, 100);
+            
+            currentModal = new bootstrap.Modal(document.getElementById('timeEntryModal'));
+            currentModal.show();
+        },
+        
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            
+            const event = info.event;
+            const entradaData = {
+                id: event.id,
+                proyecto_id: event.extendedProps.proyecto_id,
+                fecha: event.start.toISOString().split('T')[0],
+                hora_inicio: event.start.toTimeString().slice(0, 5),
+                hora_fin: event.end ? event.end.toTimeString().slice(0, 5) : '',
+                descripcion: event.extendedProps.descripcion || '',
+                horas: event.extendedProps.horas || ((event.end - event.start) / (1000 * 60 * 60)).toFixed(2)
+            };
+            
+            abrirModalEditarEntrada(entradaData);
+        }
+    });
+    
+    calendar.render();
+    console.log('Calendario inicializado correctamente');
+}
+
+// Funciones de gestión de entradas
+window.submitTimeEntry = function() {
+    const form = document.getElementById('timeEntryForm');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Validación adicional
+    const horaInicio = document.getElementById('hora_inicio').value;
+    const horaFin = document.getElementById('hora_fin').value;
+    
+    if (horaInicio && horaFin && horaInicio >= horaFin) {
+        showToast('La hora de fin debe ser posterior a la hora de inicio', 'error');
+        return;
+    }
+    
+    showLoading(true);
+    
+    const formData = new FormData(form);
+    const entradaId = document.getElementById('entrada_id').value;
+    
+    // Determinar URL y método
+    let url = URLS.nueva_entrada;
+    if (isEditMode && entradaId) {
+        url = URLS.editar_entrada(entradaId);
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => {
+        showLoading(false);
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Error en la respuesta del servidor');
+    })
+    .then(result => {
+        if (result.success) {
+            showToast(isEditMode ? 'Entrada actualizada correctamente' : 'Entrada creada correctamente', 'success');
+            currentModal.hide();
+            calendar.refetchEvents();
+        } else {
+            showToast(result.error || 'Error al procesar la entrada', 'error');
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        console.error('Error:', error);
+        showToast('Error al conectar con el servidor', 'error');
+    });
+};
+
+window.eliminarEntrada = function() {
+    const entradaId = document.getElementById('entrada_id').value;
+    
+    if (!entradaId) {
+        showToast('ID de entrada no encontrado', 'error');
+        return;
+    }
+
+    if (!confirm('¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.')) {
+        return;
+    }
+
+    showLoading(true);
+
+    fetch(URLS.eliminar_entrada(entradaId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        showLoading(false);
+        if (response.ok) {
+            showToast('Entrada eliminada correctamente', 'success');
+            currentModal.hide();
+            calendar.refetchEvents();
+        } else {
+            throw new Error('Error al eliminar la entrada');
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        console.error('Error:', error);
+        showToast('Error al eliminar la entrada', 'error');
+    });
+};
+
+// Función para calcular horas automáticamente
+function calcularHoras() {
+    const inicio = document.getElementById('hora_inicio').value;
+    const fin = document.getElementById('hora_fin').value;
+    const horasInput = document.getElementById('horas');
+    
+    if (inicio && fin && horasInput) {
+        const startTime = new Date('2000-01-01T' + inicio);
+        const endTime = new Date('2000-01-01T' + fin);
+        
+        if (endTime > startTime) {
+            const diff = (endTime - startTime) / (1000 * 60 * 60);
+            horasInput.value = diff.toFixed(2);
+        } else if (endTime < startTime) {
+            // Caso de trabajo nocturno (cruzar medianoche)
+            const diff = ((endTime.getTime() + 24 * 60 * 60 * 1000) - startTime.getTime()) / (1000 * 60 * 60);
+            horasInput.value = diff.toFixed(2);
+        }
+    }
+}
+
+// Event listeners
+function setupEventListeners() {
+    // Auto-cálculo de horas
+    const horaInicio = document.getElementById('hora_inicio');
+    const horaFin = document.getElementById('hora_fin');
+    
+    if (horaInicio && horaFin) {
+        horaInicio.addEventListener('change', calcularHoras);
+        horaFin.addEventListener('change', calcularHoras);
+    }
+    
+    // Reset modal cuando se cierra
+    const modalEl = document.getElementById('timeEntryModal');
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        limpiarModal();
+    });
+}
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando aplicación TimeTracker...');
+    
+    // Verificar dependencias
+    if (typeof FullCalendar === 'undefined') {
+        console.error('FullCalendar no está disponible');
+        document.getElementById('calendar').innerHTML = '<div class="alert alert-danger">Error: FullCalendar no se pudo cargar. Verifica que la librería esté incluida.</div>';
+        return;
+    }
+    
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap no está disponible');
+        return;
+    }
+    
+    try {
+        initCalendar();
+        setupEventListeners();
+        console.log('Aplicación inicializada correctamente');
+    } catch (error) {
+        console.error('Error durante la inicialización:', error);
+        showToast('Error al inicializar la aplicación', 'error');
+    }
+});
+</script>
+{% endblock %}

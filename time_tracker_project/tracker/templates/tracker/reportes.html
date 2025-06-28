@@ -1,0 +1,319 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Reportes - TimeTracker Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar de filtros -->
+    <div class="col-md-3">
+        <div class="sidebar">
+            <h5 class="mb-3">
+                <i class="fas fa-filter me-2"></i>Filtros de Reporte
+            </h5>
+            
+            <form method="post" id="reporteForm">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="{{ form.periodo.id_for_label }}" class="form-label">Período</label>
+                    {{ form.periodo }}
+                </div>
+                
+                <div class="mb-3" id="fechasPersonalizadas" style="display: none;">
+                    <label for="{{ form.fecha_inicio.id_for_label }}" class="form-label">Fecha Inicio</label>
+                    {{ form.fecha_inicio }}
+                    
+                    <label for="{{ form.fecha_fin.id_for_label }}" class="form-label mt-2">Fecha Fin</label>
+                    {{ form.fecha_fin }}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.cliente.id_for_label }}" class="form-label">Cliente</label>
+                    {{ form.cliente }}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.proyecto.id_for_label }}" class="form-label">Proyecto</label>
+                    {{ form.proyecto }}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.formato_exportacion.id_for_label }}" class="form-label">Formato</label>
+                    {{ form.formato_exportacion }}
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>Generar Reporte
+                    </button>
+                    
+                    <button type="button" class="btn btn-success" onclick="exportarReporte()" id="btnExportar" style="display: none;">
+                        <i class="fas fa-download me-1"></i>Exportar
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros()">
+                        <i class="fas fa-eraser me-1"></i>Limpiar
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Resumen rápido -->
+        {% if entradas %}
+        <div class="sidebar mt-4">
+            <h6 class="mb-3">
+                <i class="fas fa-chart-pie me-2"></i>Resumen
+            </h6>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Total Horas:</span>
+                    <strong>{{ total_horas|floatformat:1 }}h</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Total Entradas:</span>
+                    <strong>{{ entradas|length }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Total Facturado:</span>
+                    <strong>${{ total_facturado|floatformat:2 }}</strong>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Promedio/Día:</span>
+                    <strong>{{ total_horas|floatformat:1 }}h</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Contenido principal -->
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>
+                <i class="fas fa-chart-line me-2"></i>Reportes de Tiempo
+            </h3>
+            
+            {% if entradas %}
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="cambiarVista('tabla')">
+                    <i class="fas fa-table me-1"></i>Tabla
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="cambiarVista('grafico')">
+                    <i class="fas fa-chart-bar me-1"></i>Gráfico
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if entradas %}
+        <!-- Vista de tabla -->
+        <div id="vistaTabla" class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>Entradas de Tiempo
+                    <span class="badge bg-primary ms-2">{{ entradas|length }} entradas</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Proyecto</th>
+                                <th>Horario</th>
+                                <th>Horas</th>
+                                <th>Descripción</th>
+                                <th>Etiquetas</th>
+                                <th>Facturado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entrada in entradas %}
+                            <tr>
+                                <td>{{ entrada.fecha|date:"d/m/Y" }}</td>
+                                <td>{{ entrada.proyecto.cliente.nombre }}</td>
+                                <td>{{ entrada.proyecto.nombre }}</td>
+                                <td>
+                                    {{ entrada.hora_inicio|time:"H:i" }} - 
+                                    {{ entrada.hora_fin|time:"H:i" }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ entrada.horas|floatformat:1 }}h</span>
+                                </td>
+                                <td>{{ entrada.descripcion|truncatechars:50 }}</td>
+                                <td>
+                                    {% for etiqueta in entrada.etiquetas.all %}
+                                        <span class="badge bg-secondary me-1">{{ etiqueta.nombre }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if entrada.facturado %}
+                                        <span class="badge bg-success">Sí</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginación si hay muchas entradas -->
+                {% if entradas|length > 50 %}
+                <nav class="mt-3">
+                    <p class="text-muted text-center">
+                        Mostrando las primeras 50 entradas. Usa filtros más específicos para ver menos resultados.
+                    </p>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Vista de gráfico -->
+        <div id="vistaGrafico" class="card" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Análisis Visual
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Horas por Cliente</h6>
+                        <canvas id="graficoClientes" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Horas por Proyecto</h6>
+                        <canvas id="graficoProyectos" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6>Distribución por Fecha</h6>
+                        <canvas id="graficoTiempo" width="800" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Estado vacío -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay datos para mostrar</h5>
+                <p class="text-muted">
+                    {% if request.method == 'POST' %}
+                        No se encontraron entradas que coincidan con los filtros seleccionados.
+                    {% else %}
+                        Selecciona los filtros de arriba y haz clic en "Generar Reporte" para ver los resultados.
+                    {% endif %}
+                </p>
+                
+                {% if request.method == 'POST' %}
+                <button type="button" class="btn btn-outline-primary" onclick="limpiarFiltros()">
+                    <i class="fas fa-eraser me-1"></i>Limpiar Filtros
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mostrar/ocultar fechas personalizadas
+document.getElementById('{{ form.periodo.id_for_label }}').addEventListener('change', function() {
+    const fechasDiv = document.getElementById('fechasPersonalizadas');
+    if (this.value === 'personalizado') {
+        fechasDiv.style.display = 'block';
+    } else {
+        fechasDiv.style.display = 'none';
+    }
+});
+
+// Mostrar botón exportar si hay datos
+{% if entradas %}
+document.getElementById('btnExportar').style.display = 'block';
+{% endif %}
+
+// Cambiar vistas
+function cambiarVista(vista) {
+    const vistaTabla = document.getElementById('vistaTabla');
+    const vistaGrafico = document.getElementById('vistaGrafico');
+    
+    if (vista === 'tabla') {
+        vistaTabla.style.display = 'block';
+        vistaGrafico.style.display = 'none';
+    } else {
+        vistaTabla.style.display = 'none';
+        vistaGrafico.style.display = 'block';
+        inicializarGraficos();
+    }
+}
+
+// Limpiar filtros
+function limpiarFiltros() {
+    document.getElementById('reporteForm').reset();
+    document.getElementById('fechasPersonalizadas').style.display = 'none';
+    window.location.href = '{% url "tracker:reportes" %}';
+}
+
+// Exportar reporte
+function exportarReporte() {
+    const formato = document.getElementById('{{ form.formato_exportacion.id_for_label }}').value;
+    const form = document.getElementById('reporteForm');
+    
+    // Cambiar action para exportación
+    const originalAction = form.action;
+    form.action = '{% url "tracker:exportar_reporte" %}';
+    
+    // Agregar campo formato si no existe
+    let formatoInput = document.querySelector('input[name="formato"]');
+    if (!formatoInput) {
+        formatoInput = document.createElement('input');
+        formatoInput.type = 'hidden';
+        formatoInput.name = 'formato';
+        form.appendChild(formatoInput);
+    }
+    formatoInput.value = formato;
+    
+    form.submit();
+    
+    // Restaurar action original
+    form.action = originalAction;
+}
+
+// Inicializar gráficos (placeholder - se implementará con Chart.js)
+function inicializarGraficos() {
+    console.log('Inicializando gráficos...');
+    // Aquí implementaremos los gráficos con Chart.js
+}
+
+// Auto-submit al cambiar filtros (opcional)
+document.querySelectorAll('#reporteForm select').forEach(select => {
+    select.addEventListener('change', function() {
+        // Auto-generar reporte al cambiar filtros (opcional)
+        // document.getElementById('reporteForm').submit();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Calendario Mensual - TimeTracker Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar me-2"></i>
+                        {{ nombre_mes }} {{ year }}
+                    </h5>
+                    
+                    <div class="btn-group">
+                        <a href="?year={{ mes_anterior.year }}&month={{ mes_anterior.month }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-chevron-left me-1"></i>Anterior
+                        </a>
+                        <a href="{% url 'tracker:calendario_mensual' %}" class="btn btn-primary btn-sm">
+                            Hoy
+                        </a>
+                        <a href="?year={{ mes_siguiente.year }}&month={{ mes_siguiente.month }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            Siguiente<i class="fas fa-chevron-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Calendario mensual con FullCalendar integrado -->
+                <div id="calendarioMensual" style="height: 600px;"></div>
+                
+                <!-- Resumen mensual -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-chart-pie me-2"></i>Resumen del Mes
+                                </h6>
+                                <div class="row text-center">
+                                    <div class="col-md-2">
+                                        <div class="mb-2">
+                                            <i class="fas fa-clock fa-2x text-primary"></i>
+                                        </div>
+                                        <h5>{{ total_horas_mes|floatformat:1 }}h</h5>
+                                        <small class="text-muted">Total Horas</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="mb-2">
+                                            <i class="fas fa-calendar-day fa-2x text-success"></i>
+                                        </div>
+                                        <h5>{{ dias_trabajados }}</h5>
+                                        <small class="text-muted">Días Trabajados</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="mb-2">
+                                            <i class="fas fa-tasks fa-2x text-warning"></i>
+                                        </div>
+                                        <h5>{{ entradas|length }}</h5>
+                                        <small class="text-muted">Entradas</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="mb-2">
+                                            <i class="fas fa-project-diagram fa-2x text-info"></i>
+                                        </div>
+                                        <h5>{{ proyectos_unicos }}</h5>
+                                        <small class="text-muted">Proyectos</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="mb-2">
+                                            <i class="fas fa-chart-line fa-2x text-secondary"></i>
+                                        </div>
+                                        <h5>{{ promedio_diario|floatformat:1 }}h</h5>
+                                        <small class="text-muted">Promedio/Día</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="mb-2">
+                                            <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                                        </div>
+                                        <h5>${{ total_facturado|floatformat:0 }}</h5>
+                                        <small class="text-muted">Facturado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de entradas del mes (opcional, colapsable) -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-list me-2"></i>Entradas del Mes
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#listaEntradas">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="collapse" id="listaEntradas">
+                                <div class="card-body">
+                                    {% if entradas %}
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Fecha</th>
+                                                        <th>Proyecto</th>
+                                                        <th>Cliente</th>
+                                                        <th>Horas</th>
+                                                        <th>Descripción</th>
+                                                        <th>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for entrada in entradas %}
+                                                    <tr>
+                                                        <td>{{ entrada.fecha|date:"d/m" }}</td>
+                                                        <td>{{ entrada.proyecto.nombre }}</td>
+                                                        <td>{{ entrada.proyecto.cliente.nombre }}</td>
+                                                        <td>
+                                                            <span class="badge bg-info">{{ entrada.horas|floatformat:1 }}h</span>
+                                                        </td>
+                                                        <td>{{ entrada.descripcion|truncatechars:50 }}</td>
+                                                        <td>
+                                                            <div class="btn-group btn-group-sm">
+                                                                <a href="{% url 'tracker:editar_entrada' entrada.pk %}" 
+                                                                   class="btn btn-outline-primary btn-sm">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </a>
+                                                                <a href="{% url 'tracker:eliminar_entrada' entrada.pk %}" 
+                                                                   class="btn btn-outline-danger btn-sm"
+                                                                   onclick="return confirm('¿Eliminar?')">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted text-center">No hay entradas para este mes.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendarioMensual');
+    
+    if (calendarEl && typeof FullCalendar !== 'undefined') {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            initialDate: '{{ year }}-{{ month|stringformat:"02d" }}-01',
+            
+            headerToolbar: {
+                left: '',
+                center: '',
+                right: ''
+            },
+            
+            height: 'auto',
+            
+            events: function(fetchInfo, successCallback, failureCallback) {
+                fetch('/api/entradas/?start=' + fetchInfo.startStr + '&end=' + fetchInfo.endStr)
+                    .then(response => response.json())
+                    .then(data => successCallback(data))
+                    .catch(error => failureCallback(error));
+            },
+            
+            dateClick: function(info) {
+                window.location.href = '{% url "tracker:calendario_diario" %}?fecha=' + info.dateStr;
+            },
+            
+            eventClick: function(info) {
+                window.location.href = '{% url "tracker:editar_entrada" 0 %}'.replace('0', info.event.id);
+            },
+            
+            dayCellContent: function(arg) {
+                return arg.dayNumberText;
+            },
+            
+            eventDidMount: function(info) {
+                // Personalizar la apariencia de los eventos
+                info.el.style.fontSize = '11px';
+                info.el.style.padding = '1px 3px';
+                info.el.title = info.event.extendedProps.descripcion || info.event.title;
+            },
+            
+            dayMaxEvents: 3,
+            moreLinkClick: function(info) {
+                window.location.href = '{% url "tracker:calendario_diario" %}?fecha=' + info.date.toISOString().split('T')[0];
+            }
+        });
+        
+        calendar.render();
+    }
+});
+</script>
+{% endblock %}

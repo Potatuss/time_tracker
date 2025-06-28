@@ -1,0 +1,60 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Eliminar Entrada - TimeTracker Pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                </div>
+                
+                <h6>¿Estás seguro de que quieres eliminar esta entrada de tiempo?</h6>
+                
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ entrada.proyecto.nombre }}</h6>
+                        <p class="card-text">
+                            <strong>Cliente:</strong> {{ entrada.proyecto.cliente.nombre }}<br>
+                            <strong>Fecha:</strong> {{ entrada.fecha|date:"d/m/Y" }}<br>
+                            <strong>Horario:</strong> {{ entrada.hora_inicio|time:"H:i" }} - {{ entrada.hora_fin|time:"H:i" }}<br>
+                            <strong>Horas:</strong> {{ entrada.horas }} horas<br>
+                            <strong>Descripción:</strong> {{ entrada.descripcion|truncatechars:100 }}
+                        </p>
+                        
+                        {% if entrada.etiquetas.all %}
+                            <div class="mt-2">
+                                <strong>Etiquetas:</strong>
+                                {% for etiqueta in entrada.etiquetas.all %}
+                                    <span class="badge bg-secondary me-1">{{ etiqueta.nombre }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'tracker:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Cancelar
+                    </a>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Eliminar Definitivamente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

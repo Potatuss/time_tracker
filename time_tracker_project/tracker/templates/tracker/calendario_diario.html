@@ -1,0 +1,253 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Calendario Diario - TimeTracker Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar con resumen -->
+    <div class="col-md-3">
+        <div class="sidebar">
+            <h5 class="mb-3">
+                <i class="fas fa-calendar-day me-2"></i>Resumen del Día
+            </h5>
+            
+            <div class="quick-stats">
+                <i class="fas fa-clock text-primary"></i>
+                <div>
+                    <h6 class="mb-0">Total Horas</h6>
+                    <span class="text-muted">{{ total_horas|floatformat:1 }}h</span>
+                </div>
+            </div>
+            
+            <div class="quick-stats">
+                <i class="fas fa-tasks text-success"></i>
+                <div>
+                    <h6 class="mb-0">Entradas</h6>
+                    <span class="text-muted">{{ entradas|length }}</span>
+                </div>
+            </div>
+            
+            <div class="quick-stats">
+                <i class="fas fa-project-diagram text-warning"></i>
+                <div>
+                    <h6 class="mb-0">Proyectos</h6>
+                    <span class="text-muted">{{ entradas|regroup_by:"proyecto"|length }}</span>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="d-grid gap-2">
+                <a href="{% url 'tracker:nueva_entrada' %}?fecha={{ fecha|date:'Y-m-d' }}" 
+                   class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nueva Entrada
+                </a>
+                
+                <a href="{% url 'tracker:calendario_semanal' %}?fecha={{ fecha|date:'Y-m-d' }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-calendar-week me-2"></i>Ver Semana
+                </a>
+                
+                <a href="{% url 'tracker:calendario_mensual' %}?year={{ fecha.year }}&month={{ fecha.month }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-calendar me-2"></i>Ver Mes
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenido principal -->
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-day me-2"></i>
+                        {{ fecha|date:"l, d \d\e F \d\e Y" }}
+                        {% if fecha == "now"|date:'Y-m-d'|date:'Y-m-d' %}
+                            <span class="badge bg-primary ms-2">Hoy</span>
+                        {% endif %}
+                    </h5>
+                    
+                    <div class="btn-group">
+                        <a href="?fecha={{ dia_anterior|date:'Y-m-d' }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-chevron-left me-1"></i>Anterior
+                        </a>
+                        <a href="{% url 'tracker:calendario_diario' %}" class="btn btn-primary btn-sm">
+                            Hoy
+                        </a>
+                        <a href="?fecha={{ dia_siguiente|date:'Y-m-d' }}" class="btn btn-outline-primary btn-sm">
+                            Siguiente<i class="fas fa-chevron-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                {% if entradas %}
+                    <!-- Timeline de entradas -->
+                    <div class="timeline">
+                        {% for entrada in entradas %}
+                        <div class="timeline-item mb-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-2 text-center">
+                                    <div class="time-badge">
+                                        <strong>{{ entrada.hora_inicio|time:"H:i" }}</strong>
+                                        <br>
+                                        <small>{{ entrada.hora_fin|time:"H:i" }}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-8">
+                                    <div class="entrada-card card">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        <strong>{{ entrada.proyecto.nombre }}</strong>
+                                                        <small class="text-muted">- {{ entrada.proyecto.cliente.nombre }}</small>
+                                                    </h6>
+                                                    <p class="mb-2">{{ entrada.descripcion }}</p>
+                                                    
+                                                    {% if entrada.etiquetas.all %}
+                                                        <div class="mb-2">
+                                                            {% for etiqueta in entrada.etiquetas.all %}
+                                                                <span class="badge bg-secondary me-1">{{ etiqueta.nombre }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                    
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        Duración: {{ entrada.horas|floatformat:1 }} horas
+                                                        {% if entrada.facturado %}
+                                                            <span class="badge bg-success ms-2">Facturado</span>
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'tracker:editar_entrada' entrada.pk %}" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'tracker:eliminar_entrada' entrada.pk %}" 
+                                                       class="btn btn-outline-danger btn-sm"
+                                                       onclick="return confirm('¿Eliminar esta entrada?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-2 text-center">
+                                    <span class="badge time-badge-large px-3 py-2">
+                                        {{ entrada.horas|floatformat:1 }}h
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Resumen del día -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <h5 class="text-primary">{{ total_horas|floatformat:1 }}h</h5>
+                                <small class="text-muted">Total Trabajado</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h5 class="text-success">{{ entradas|length }}</h5>
+                                <small class="text-muted">Entradas</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h5 class="text-warning">
+                                    {% regroup entradas by proyecto as proyectos_agrupados %}
+                                    {{ proyectos_agrupados|length }}
+                                </h5>
+                                <small class="text-muted">Proyectos</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h5 class="text-info">
+                                    {% for entrada in entradas %}
+                                        {% if entrada.proyecto.tarifa_por_hora %}
+                                            {{ entrada.horas|mul:entrada.proyecto.tarifa_por_hora|add:0 }}
+                                        {% endif %}
+                                    {% endfor %}$
+                                </h5>
+                                <small class="text-muted">Facturado</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                {% else %}
+                    <!-- Estado vacío -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-day fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted">No hay entradas para este día</h4>
+                        <p class="text-muted mb-4">
+                            Comienza registrando tu primera entrada de tiempo para {{ fecha|date:"d/m/Y" }}.
+                        </p>
+                        
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'tracker:nueva_entrada' %}?fecha={{ fecha|date:'Y-m-d' }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Crear Primera Entrada
+                            </a>
+                            
+                            <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-calendar me-1"></i>Ver Calendario
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline-item {
+    position: relative;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 50px;
+    top: 80px;
+    width: 2px;
+    height: 40px;
+    background-color: #e9ecef;
+}
+
+.time-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.time-badge-large {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.entrada-card {
+    border-left: 4px solid #667eea;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.entrada-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+</style>
+{% endblock %}

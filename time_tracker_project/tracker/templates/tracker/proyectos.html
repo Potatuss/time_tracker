@@ -1,0 +1,215 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Gestión de Proyectos - TimeTracker Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar para nuevo proyecto -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-project-diagram me-2"></i>Nuevo Proyecto
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                            <i class="fas fa-project-diagram me-1"></i>{{ form.nombre.label }}
+                        </label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <div class="text-danger small">{{ form.nombre.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.cliente.id_for_label }}" class="form-label">
+                            <i class="fas fa-user me-1"></i>{{ form.cliente.label }}
+                        </label>
+                        {{ form.cliente }}
+                        {% if form.cliente.errors %}
+                            <div class="text-danger small">{{ form.cliente.errors }}</div>
+                        {% endif %}
+                        <small class="text-muted">
+                            ¿No encuentras el cliente? 
+                            <a href="{% url 'tracker:nuevo_cliente' %}" target="_blank">Crear nuevo cliente</a>
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label">
+                            <i class="fas fa-file-alt me-1"></i>{{ form.descripcion.label }}
+                        </label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.fecha_inicio.id_for_label }}" class="form-label">
+                            <i class="fas fa-calendar me-1"></i>{{ form.fecha_inicio.label }}
+                        </label>
+                        {{ form.fecha_inicio }}
+                        {% if form.fecha_inicio.errors %}
+                            <div class="text-danger small">{{ form.fecha_inicio.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.tarifa_por_hora.id_for_label }}" class="form-label">
+                            <i class="fas fa-dollar-sign me-1"></i>{{ form.tarifa_por_hora.label }}
+                        </label>
+                        {{ form.tarifa_por_hora }}
+                        {% if form.tarifa_por_hora.errors %}
+                            <div class="text-danger small">{{ form.tarifa_por_hora.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar Proyecto
+                        </button>
+                        
+                        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de proyectos existentes -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-project-diagram me-2"></i>Proyectos Activos
+                    <span class="badge bg-primary ms-2">{{ proyectos|length }}</span>
+                </h5>
+                
+                <a href="/admin/tracker/proyecto/" target="_blank" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-cog me-1"></i>Gestión Avanzada
+                </a>
+            </div>
+            
+            <div class="card-body">
+                {% if proyectos %}
+                    <div class="row">
+                        {% for proyecto in proyectos %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <h6 class="card-title mb-1">
+                                                <i class="fas fa-project-diagram me-1"></i>{{ proyecto.nombre }}
+                                                <span class="badge bg-{{ proyecto.estado|yesno:'success,warning,danger' }} ms-2">
+                                                    {{ proyecto.get_estado_display }}
+                                                </span>
+                                            </h6>
+                                            
+                                            <p class="mb-1">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user me-1"></i>{{ proyecto.cliente.nombre }}
+                                                </small>
+                                            </p>
+                                            
+                                            {% if proyecto.descripcion %}
+                                                <p class="mb-1">
+                                                    <small>{{ proyecto.descripcion|truncatechars:80 }}</small>
+                                                </p>
+                                            {% endif %}
+                                            
+                                            <div class="d-flex gap-3">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    Inicio: {{ proyecto.fecha_inicio|date:"d/m/Y" }}
+                                                </small>
+                                                
+                                                {% if proyecto.tarifa_por_hora %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-dollar-sign me-1"></i>
+                                                        ${{ proyecto.tarifa_por_hora }}/hora
+                                                    </small>
+                                                {% endif %}
+                                                
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ proyecto.total_horas_trabajadas|floatformat:1 }}h trabajadas
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4 text-end">
+                                            <div class="mb-2">
+                                                {% if proyecto.tarifa_por_hora %}
+                                                    <h6 class="text-success mb-0">
+                                                        ${{ proyecto.total_facturado|floatformat:0 }}
+                                                    </h6>
+                                                    <small class="text-muted">Facturado</small>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'tracker:nueva_entrada' %}?proyecto={{ proyecto.id }}" 
+                                                   class="btn btn-success btn-sm"
+                                                   title="Registrar tiempo en este proyecto">
+                                                    <i class="fas fa-plus"></i>
+                                                </a>
+                                                
+                                                <a href="/admin/tracker/proyecto/{{ proyecto.id }}/change/" 
+                                                   target="_blank" 
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                
+                                                <a href="{% url 'tracker:reportes' %}?proyecto={{ proyecto.id }}" 
+                                                   class="btn btn-outline-info btn-sm"
+                                                   title="Ver reporte del proyecto">
+                                                    <i class="fas fa-chart-line"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay proyectos registrados</h5>
+                        <p class="text-muted">Comienza creando tu primer proyecto usando el formulario de la izquierda.</p>
+                        
+                        <a href="{% url 'tracker:nuevo_cliente' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus me-1"></i>Crear Cliente Primero
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Pre-seleccionar cliente si viene como parámetro
+const urlParams = new URLSearchParams(window.location.search);
+const clienteId = urlParams.get('cliente');
+if (clienteId) {
+    const clienteSelect = document.getElementById('{{ form.cliente.id_for_label }}');
+    if (clienteSelect) {
+        clienteSelect.value = clienteId;
+    }
+}
+</script>
+{% endblock %}
